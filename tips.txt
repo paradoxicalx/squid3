@@ -1,0 +1,164 @@
+apt-get update && apt-get upgrade
+
+apt-get install build-essential devscripts libcppunit-dev openssl libssl-dev libcap-dev libsasl2-dev ccze pkg-config libkrb5-dev apache2 php5 -y
+
+wget http://www.measurement-factory.com/tmp/ecap/libecap-1.0.0.tar.gz
+
+wget http://www.measurement-factory.com/tmp/ecap/ecap_adapter_sample-1.0.0.tar.gz
+
+tar xzvf libecap-1.0.0.tar.gz
+
+tar xzvf ecap_adapter_sample-1.0.0.tar.gz
+
+cd libecap-1.0.0
+
+./configure && make && make install
+
+echo '/usr/local/lib' >> /etc/ld.so.conf
+
+ldconfig
+
+cd
+
+cd ecap_adapter_sample-1.0.0/src
+
+### edit file adapter_async.cc dengan nano atau vi
+### lalu cari baris berikut :
+sleep(delay); // simulate slow analysis
+### ubah menjadi :
+//  sleep(delay); // simulate slow analysis
+
+cd
+
+cd ecap_adapter_sample-1.0.0
+
+./configure && make && make install
+
+wget http://www.squid-cache.org/Versions/v3/3.5/squid-3.5.24.tar.gz
+
+tar xzvf squid-3.5.24.tar.gz
+
+wget -O squid_forgery.patch http://www.squid-cache.org/mail-archive/squid-users/201404/att-0240/squid_forgery.patch.txt
+
+cd squid-3.5.24/
+
+patch -p0 <../squid_forgery.patch
+
+./configure \
+--prefix=/usr \
+--bindir=/usr/bin \
+--sbindir=/usr/sbin \
+--libexecdir=/usr/lib/squid \
+--sysconfdir=/etc/squid \
+--localstatedir=/var \
+--libdir=/usr/lib \
+--includedir=/usr/include \
+--datadir=/usr/share/squid \
+--mandir=/usr/share/man \
+--with-logdir=/var/log/squid \
+--with-pid-file=/var/run/squid.pid \
+--with-openssl \
+--enable-ssl-crtd \
+--enable-icmp \
+--enable-wccp \
+--enable-wccpv2 \
+--disable-kqueue \
+--disable-esi \
+--disable-arch-native \
+--enable-poll \
+--enable-ident-lookups \
+--enable-storeio=aufs,diskd,ufs,rock \
+--enable-underscores \
+--enable-http-violations \
+--enable-removal-policies=heap,lru \
+--enable-delay-pools \
+--enable-linux-netfilter \
+--enable-snmp \
+--enable-auth \
+--enable-auth-basic \
+--enable-auth-digest \
+--enable-auth-negotiate \
+--enable-auth-ntlm \
+--enable-log-daemon-helpers \
+--enable-url-rewrite-helpers \
+--enable-storeid-rewrite-helpers \
+--enable-build-info \
+--enable-eui \
+--enable-async-io=16 \
+--enable-unlinkd \
+--enable-epoll \
+--enable-select \
+--enable-cache-digests \
+--enable-forw-via-db \
+--enable-htcp \
+--enable-kill-parent-hack \
+--enable-icap-client \
+--enable-ecap \
+--enable-zph-qos \
+--with-dl \
+--with-filedescriptors=65536 \
+--with-large-files \
+--enable-ltdl-convenience
+
+make && make install
+
+mkdir /cache
+
+chown -R nobody /var/log/squid
+
+chown -R nobody /cache
+
+mkdir -p /etc/squid/ssl_cert
+
+openssl req -new -newkey rsa:2048 -sha256 -days 365 -nodes -x509 -keyout /etc/squid/ssl_cert/wavenet.pem -out /etc/squid/ssl_cert/wavenet.pem -subj "/C=ID/ST=DIY/L=Jogja/O=Wave/CN=Wavenet"
+
+openssl x509 -in /etc/squid/ssl_cert/wavenet.pem -outform DER -out /etc/squid/ssl_cert/wavenet.der
+
+openssl x509 -in /etc/squid/ssl_cert/wavenet.pem -outform DER -out /etc/squid/ssl_cert/wavenet.crt
+
+/usr/lib/squid/ssl_crtd -c -s /var/lib/ssl_db
+
+chown -R nobody /var/lib/ssl_db
+
+########### config
+
+########### storeid.pl
+
+chmod +x /etc/squid/squid.conf
+
+chmod +x /etc/squid/storeid.pl
+
+squid -zN
+
+wget --no-check-certificate -O /etc/init.d/squid https://gist.githubusercontent.com/e7d/1f784339df82c57a43bf/raw/squid.sh
+
+chmod +x /etc/init.d/squid
+
+update-rc.d squid defaults
+
+nano /etc/rc.local
+
+iptables -t mangle -N DIVERT
+iptables -t mangle -A DIVERT -j MARK --set-mark 1
+iptables -t mangle -A DIVERT -j ACCEPT
+iptables -t mangle -A PREROUTING -p tcp -m socket -j DIVERT
+iptables -t mangle -A PREROUTING -p tcp --dport 80 -j TPROXY --tproxy-mark 0x1/0x1 --on-port 3129
+iptables -t mangle -A PREROUTING -p tcp --dport 8080 -j TPROXY --tproxy-mark 0x1/0x1 --on-port 3129
+iptables -t mangle -A PREROUTING -p tcp --dport 8777 -j TPROXY --tproxy-mark 0x1/0x1 --on-port 3129
+iptables -t mangle -A PREROUTING -p tcp --dport 182 -j TPROXY --tproxy-mark 0x1/0x1 --on-port 3129
+iptables -t mangle -A PREROUTING -p tcp --dport 5050 -j TPROXY --tproxy-mark 0x1/0x1 --on-port 3129
+iptables -t mangle -A PREROUTING -p tcp --dport 443 -j TPROXY --tproxy-mark 0x1/0x1 --on-port 3127
+ip rule add fwmark 1 lookup 212
+ip route add local 0.0.0.0/0 dev lo table 212
+
+
+
+
+
+
+
+
+
+
+
+
