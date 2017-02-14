@@ -1,0 +1,35 @@
+apt-get install apache2 php5 -y
+# download speedtest manipulasi
+cd /var/www
+wget http://c.speedtest.net/mini/mini.zip
+unzip mini.zip
+cp -arv mini/speedtest /var/www
+wget -O /var/www/speedtest/speedtest.swf http://c.speedtest.net/flash/speedtest.swf
+wget -O /var/www/speedtest/speedtest-long.swf http://c.speedtest.net/flash/speedtest-long.swf
+wget -O /var/www/speedtest-config.php http://www.speedtest.net/speedtest-config.php
+wget -O /var/www/ipaddress.php http://api.ookla.com/ipaddress.php
+ 
+# gunakan winscp, ke folder /var/www
+# klik 2x file speedtest-config.php untuk edit
+# ubah bagian ip="36.79.204.226" menjadi ip="10.11.12.13" dan bagian isp="Telkom" menjadi isp="ISPKU.net"
+# save dan exit editor
+# lalu klik 2x file ipaddress.php untuk edit
+# ubah bagian ip_address=36.79.204.226 menjadi ip_address=10.11.12.13 dan bagian isp=PT+Telkom+Indonesia menjadi isp=ISPKU.net
+# save dan exit editor
+ 
+# masih di winscp, menuju folder /etc/apache2 ( refresh bila folder tidak ditemukan)
+# klik 2x file ports.conf, tambakan script Listen 8033 dibawah script Listen 80
+# save dan exit editor
+ 
+# menggunakan putty lagi
+/etc/init.d/apache2 restart
+ 
+# tambahkan script berikut di squid.conf
+acl speedtest url_regex -i ^http.*([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|speedtest|espeed|api\.ookla).*\/(speedtest\.swf|speedtest-long\.swf|latency\.txt|upload\.php|speedtest-config\.php|ipaddress\.php|random.*\.jpg)
+ 
+cache_peer 10.212.212.212 parent 8033 0 no-digest no-tproxy
+dead_peer_timeout 5 seconds
+cache_peer_access 10.212.212.212 allow speedtest
+cache_peer_access 10.212.212.212 deny all
+always_direct deny speedtest
+never_direct allow speedtest
